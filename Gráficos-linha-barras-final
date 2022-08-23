@@ -1,0 +1,1945 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "Graficos-linha-barras-final.ipynb",
+      "provenance": [],
+      "collapsed_sections": []
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Séries temporais"
+      ],
+      "metadata": {
+        "id": "hxMCaxcOeMSk"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "##Importa pacotes necessários"
+      ],
+      "metadata": {
+        "id": "VTbEG_8OjgDU"
+      }
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "SrI6g6ZwqMHf",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "3b8762bc-1327-4a81-92db-e4689670733d"
+      },
+      "source": [
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "import plotly.express as px\n",
+        "from plotly.subplots import make_subplots\n",
+        "import plotly.graph_objects as go\n",
+        "\n",
+        "from statsmodels.tsa.stattools import adfuller\n",
+        "import matplotlib.pyplot as plt\n",
+        "from datetime import datetime as dt\n",
+        "import pytz\n",
+        "\n",
+        "#formatação de tabela \n",
+        "pd.options.display.float_format = '{:.2f}'.format"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "/usr/local/lib/python3.7/dist-packages/statsmodels/tools/_testing.py:19: FutureWarning: pandas.util.testing is deprecated. Use the functions in the public API at pandas.testing instead.\n",
+            "  import pandas.util.testing as tm\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Lê o csv com os dados direto do repositório github \n",
+        "#(arquivo extraído do brasil.io contendo *apenas* cidades de SC com dados até 27 de março de 2022)\n",
+        "#E converte a coluna que contém a data do tipo \"object\" para o tipo \"date\""
+      ],
+      "metadata": {
+        "id": "apxqcY_bjmne"
+      }
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "GDnysBTQr-HK"
+      },
+      "source": [
+        "#dateparse=lambda dates:pd.datetime.strftime(dates,'%Y/%m/%d')\n",
+        "cidades_SC = pd.read_csv('https://github.com/virginiareck/Dados-COVID/raw/main/2cidades-RegGrandeFpolis-clear.csv', parse_dates=['date'])\n",
+        "cidades_SC"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Exclui algumas colunas desnecessárias com \"drop\"\n",
+        "#Cria colunas \"mês\" e \"ano\" a partir da coluna \"data\""
+      ],
+      "metadata": {
+        "id": "l6ypVoUMaTF7"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "cidades_SC.drop(['city_y', 'Unnamed: 0', 'estimated_population_2019','is_last','order_for_place','capital','state','place_type','codigo_uf'], axis = 1)\n",
+        "cidades_SC = cidades_SC.rename(columns={'city_x': 'city'})\n",
+        "cidades_SC['ano'] = cidades_SC['date'].dt.year\n",
+        "cidades_SC['mês'] = cidades_SC['date'].dt.month\n",
+        "cidades_SC"
+      ],
+      "metadata": {
+        "id": "82xp7PjhL7pv"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Cria lista com as 4 maiores cidades (em população) da Região Metropolitana de Florianópolis: Biguaçu, Florianópolis, Palhoça e São José"
+      ],
+      "metadata": {
+        "id": "UJ99Bg3bbc9n"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "lista_cidades_maiores = ['Biguaçu','Florianópolis','Palhoça','São José']"
+      ],
+      "metadata": {
+        "id": "sfSMJO-qbcE8"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Cria dataframe contendo apenas dos dados dessas 4 cidades"
+      ],
+      "metadata": {
+        "id": "JKogyGf9bxiG"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df_cidades_maiores = cidades_SC[cidades_SC['city'].isin(lista_cidades_maiores)]\n",
+        "df_cidades_maiores"
+      ],
+      "metadata": {
+        "id": "WpcBPBQebw46"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Filtra dados para 2020 e cria dataframe só com esses dados"
+      ],
+      "metadata": {
+        "id": "LbonWuBfb-Yh"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "maiores_cidades_2020 = df_cidades_maiores.query('ano==2020')\n",
+        "\n",
+        "maiores_cidades_2020.head()"
+      ],
+      "metadata": {
+        "id": "EG2wU-2ub7pO"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Filtra dados para 2021 e cria dataframe só com esses dados"
+      ],
+      "metadata": {
+        "id": "qyEwQ26Jd3pS"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "maiores_cidades_2021 = df_cidades_maiores.query('ano==2021')\n",
+        "\n",
+        "maiores_cidades_2021.head()"
+      ],
+      "metadata": {
+        "id": "GVSHO9h5dzb4"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Filtra dados para 2022 e cria dataframe só com esses dados"
+      ],
+      "metadata": {
+        "id": "wU2G_80Xd7FS"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "maiores_cidades_2022 = df_cidades_maiores.query('ano==2022')\n",
+        "\n",
+        "maiores_cidades_2022.head()"
+      ],
+      "metadata": {
+        "id": "jG8NPYVUd7RR"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Agrupa os dados por cidade e mês, no ano 2020"
+      ],
+      "metadata": {
+        "id": "XeQxhqY_cR_N"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "maiores_cidades_agrupado_2020 = maiores_cidades_2020.groupby(['city','mês',])['last_available_confirmed','last_available_deaths'].max().reset_index()\n",
+        "\n",
+        "maiores_cidades_agrupado_2020"
+      ],
+      "metadata": {
+        "id": "BY9WAcSTcSM8",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 1000
+        },
+        "outputId": "4623b570-c0f6-400b-dce4-b6d87f7ea451"
+      },
+      "execution_count": 61,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "/usr/local/lib/python3.7/dist-packages/ipykernel_launcher.py:1: FutureWarning:\n",
+            "\n",
+            "Indexing with multiple keys (implicitly converted to a tuple of keys) will be deprecated, use a list instead.\n",
+            "\n"
+          ]
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "             city  mês  last_available_confirmed  last_available_deaths\n",
+              "0         Biguaçu    4                         8                      0\n",
+              "1         Biguaçu    5                        23                      0\n",
+              "2         Biguaçu    6                       216                      3\n",
+              "3         Biguaçu    7                       944                     16\n",
+              "4         Biguaçu    8                      1845                     30\n",
+              "5         Biguaçu    9                      2057                     34\n",
+              "6         Biguaçu   10                      3098                     37\n",
+              "7         Biguaçu   11                      4791                     46\n",
+              "8         Biguaçu   12                      5980                     56\n",
+              "9   Florianópolis    3                        58                      0\n",
+              "10  Florianópolis    4                       414                      5\n",
+              "11  Florianópolis    5                       705                      7\n",
+              "12  Florianópolis    6                      1438                     14\n",
+              "13  Florianópolis    7                      3280                     52\n",
+              "14  Florianópolis    8                     11118                    117\n",
+              "15  Florianópolis    9                     13222                    135\n",
+              "16  Florianópolis   10                     20427                    164\n",
+              "17  Florianópolis   11                     32439                    236\n",
+              "18  Florianópolis   12                     42079                    332\n",
+              "19        Palhoça    4                        32                      1\n",
+              "20        Palhoça    5                       133                      1\n",
+              "21        Palhoça    6                       680                      4\n",
+              "22        Palhoça    7                      2304                     26\n",
+              "23        Palhoça    8                      5177                     50\n",
+              "24        Palhoça    9                      5968                     57\n",
+              "25        Palhoça   10                      8499                     65\n",
+              "26        Palhoça   11                     11978                     85\n",
+              "27        Palhoça   12                     15128                    106\n",
+              "28       São José    3                        10                      0\n",
+              "29       São José    4                        54                      1\n",
+              "30       São José    5                       127                      2\n",
+              "31       São José    6                       458                      9\n",
+              "32       São José    7                      2138                     36\n",
+              "33       São José    8                      5753                     80\n",
+              "34       São José    9                      7234                     88\n",
+              "35       São José   10                     12358                    101\n",
+              "36       São José   11                     17790                    134\n",
+              "37       São José   12                     21702                    194"
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-7386a2d2-2f80-40fa-82d6-8641eb02842a\">\n",
+              "    <div class=\"colab-df-container\">\n",
+              "      <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>city</th>\n",
+              "      <th>mês</th>\n",
+              "      <th>last_available_confirmed</th>\n",
+              "      <th>last_available_deaths</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>Biguaçu</td>\n",
+              "      <td>4</td>\n",
+              "      <td>8</td>\n",
+              "      <td>0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>Biguaçu</td>\n",
+              "      <td>5</td>\n",
+              "      <td>23</td>\n",
+              "      <td>0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>Biguaçu</td>\n",
+              "      <td>6</td>\n",
+              "      <td>216</td>\n",
+              "      <td>3</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>Biguaçu</td>\n",
+              "      <td>7</td>\n",
+              "      <td>944</td>\n",
+              "      <td>16</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>Biguaçu</td>\n",
+              "      <td>8</td>\n",
+              "      <td>1845</td>\n",
+              "      <td>30</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>5</th>\n",
+              "      <td>Biguaçu</td>\n",
+              "      <td>9</td>\n",
+              "      <td>2057</td>\n",
+              "      <td>34</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>6</th>\n",
+              "      <td>Biguaçu</td>\n",
+              "      <td>10</td>\n",
+              "      <td>3098</td>\n",
+              "      <td>37</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>7</th>\n",
+              "      <td>Biguaçu</td>\n",
+              "      <td>11</td>\n",
+              "      <td>4791</td>\n",
+              "      <td>46</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>8</th>\n",
+              "      <td>Biguaçu</td>\n",
+              "      <td>12</td>\n",
+              "      <td>5980</td>\n",
+              "      <td>56</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>9</th>\n",
+              "      <td>Florianópolis</td>\n",
+              "      <td>3</td>\n",
+              "      <td>58</td>\n",
+              "      <td>0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>10</th>\n",
+              "      <td>Florianópolis</td>\n",
+              "      <td>4</td>\n",
+              "      <td>414</td>\n",
+              "      <td>5</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>11</th>\n",
+              "      <td>Florianópolis</td>\n",
+              "      <td>5</td>\n",
+              "      <td>705</td>\n",
+              "      <td>7</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>12</th>\n",
+              "      <td>Florianópolis</td>\n",
+              "      <td>6</td>\n",
+              "      <td>1438</td>\n",
+              "      <td>14</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>13</th>\n",
+              "      <td>Florianópolis</td>\n",
+              "      <td>7</td>\n",
+              "      <td>3280</td>\n",
+              "      <td>52</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>14</th>\n",
+              "      <td>Florianópolis</td>\n",
+              "      <td>8</td>\n",
+              "      <td>11118</td>\n",
+              "      <td>117</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>15</th>\n",
+              "      <td>Florianópolis</td>\n",
+              "      <td>9</td>\n",
+              "      <td>13222</td>\n",
+              "      <td>135</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>16</th>\n",
+              "      <td>Florianópolis</td>\n",
+              "      <td>10</td>\n",
+              "      <td>20427</td>\n",
+              "      <td>164</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>17</th>\n",
+              "      <td>Florianópolis</td>\n",
+              "      <td>11</td>\n",
+              "      <td>32439</td>\n",
+              "      <td>236</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>18</th>\n",
+              "      <td>Florianópolis</td>\n",
+              "      <td>12</td>\n",
+              "      <td>42079</td>\n",
+              "      <td>332</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>19</th>\n",
+              "      <td>Palhoça</td>\n",
+              "      <td>4</td>\n",
+              "      <td>32</td>\n",
+              "      <td>1</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>20</th>\n",
+              "      <td>Palhoça</td>\n",
+              "      <td>5</td>\n",
+              "      <td>133</td>\n",
+              "      <td>1</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>21</th>\n",
+              "      <td>Palhoça</td>\n",
+              "      <td>6</td>\n",
+              "      <td>680</td>\n",
+              "      <td>4</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>22</th>\n",
+              "      <td>Palhoça</td>\n",
+              "      <td>7</td>\n",
+              "      <td>2304</td>\n",
+              "      <td>26</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>23</th>\n",
+              "      <td>Palhoça</td>\n",
+              "      <td>8</td>\n",
+              "      <td>5177</td>\n",
+              "      <td>50</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>24</th>\n",
+              "      <td>Palhoça</td>\n",
+              "      <td>9</td>\n",
+              "      <td>5968</td>\n",
+              "      <td>57</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>25</th>\n",
+              "      <td>Palhoça</td>\n",
+              "      <td>10</td>\n",
+              "      <td>8499</td>\n",
+              "      <td>65</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>26</th>\n",
+              "      <td>Palhoça</td>\n",
+              "      <td>11</td>\n",
+              "      <td>11978</td>\n",
+              "      <td>85</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>27</th>\n",
+              "      <td>Palhoça</td>\n",
+              "      <td>12</td>\n",
+              "      <td>15128</td>\n",
+              "      <td>106</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>28</th>\n",
+              "      <td>São José</td>\n",
+              "      <td>3</td>\n",
+              "      <td>10</td>\n",
+              "      <td>0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>29</th>\n",
+              "      <td>São José</td>\n",
+              "      <td>4</td>\n",
+              "      <td>54</td>\n",
+              "      <td>1</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>30</th>\n",
+              "      <td>São José</td>\n",
+              "      <td>5</td>\n",
+              "      <td>127</td>\n",
+              "      <td>2</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>31</th>\n",
+              "      <td>São José</td>\n",
+              "      <td>6</td>\n",
+              "      <td>458</td>\n",
+              "      <td>9</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>32</th>\n",
+              "      <td>São José</td>\n",
+              "      <td>7</td>\n",
+              "      <td>2138</td>\n",
+              "      <td>36</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>33</th>\n",
+              "      <td>São José</td>\n",
+              "      <td>8</td>\n",
+              "      <td>5753</td>\n",
+              "      <td>80</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>34</th>\n",
+              "      <td>São José</td>\n",
+              "      <td>9</td>\n",
+              "      <td>7234</td>\n",
+              "      <td>88</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>35</th>\n",
+              "      <td>São José</td>\n",
+              "      <td>10</td>\n",
+              "      <td>12358</td>\n",
+              "      <td>101</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>36</th>\n",
+              "      <td>São José</td>\n",
+              "      <td>11</td>\n",
+              "      <td>17790</td>\n",
+              "      <td>134</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>37</th>\n",
+              "      <td>São José</td>\n",
+              "      <td>12</td>\n",
+              "      <td>21702</td>\n",
+              "      <td>194</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "      <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-7386a2d2-2f80-40fa-82d6-8641eb02842a')\"\n",
+              "              title=\"Convert this dataframe to an interactive table.\"\n",
+              "              style=\"display:none;\">\n",
+              "        \n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M0 0h24v24H0V0z\" fill=\"none\"/>\n",
+              "    <path d=\"M18.56 5.44l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94zm-11 1L8.5 8.5l.94-2.06 2.06-.94-2.06-.94L8.5 2.5l-.94 2.06-2.06.94zm10 10l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94z\"/><path d=\"M17.41 7.96l-1.37-1.37c-.4-.4-.92-.59-1.43-.59-.52 0-1.04.2-1.43.59L10.3 9.45l-7.72 7.72c-.78.78-.78 2.05 0 2.83L4 21.41c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l7.78-7.78 2.81-2.81c.8-.78.8-2.07 0-2.86zM5.41 20L4 18.59l7.72-7.72 1.47 1.35L5.41 20z\"/>\n",
+              "  </svg>\n",
+              "      </button>\n",
+              "      \n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      flex-wrap:wrap;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "      <script>\n",
+              "        const buttonEl =\n",
+              "          document.querySelector('#df-7386a2d2-2f80-40fa-82d6-8641eb02842a button.colab-df-convert');\n",
+              "        buttonEl.style.display =\n",
+              "          google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "        async function convertToInteractive(key) {\n",
+              "          const element = document.querySelector('#df-7386a2d2-2f80-40fa-82d6-8641eb02842a');\n",
+              "          const dataTable =\n",
+              "            await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                     [key], {});\n",
+              "          if (!dataTable) return;\n",
+              "\n",
+              "          const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "            '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "            + ' to learn more about interactive tables.';\n",
+              "          element.innerHTML = '';\n",
+              "          dataTable['output_type'] = 'display_data';\n",
+              "          await google.colab.output.renderOutput(dataTable, element);\n",
+              "          const docLink = document.createElement('div');\n",
+              "          docLink.innerHTML = docLinkHtml;\n",
+              "          element.appendChild(docLink);\n",
+              "        }\n",
+              "      </script>\n",
+              "    </div>\n",
+              "  </div>\n",
+              "  "
+            ]
+          },
+          "metadata": {},
+          "execution_count": 61
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Plota gráfico da série temporal dos novos casos para as 4 cidades"
+      ],
+      "metadata": {
+        "id": "BNON6Ay-c4i5"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from IPython.core.pylabtools import figsize\n",
+        "for city, date in df_cidades_maiores.groupby('city'):\n",
+        "    plt.plot(date['date'], date['new_confirmed'],label=city)\n",
+        "\n",
+        "plt.xlabel('data')\n",
+        "plt.ylabel('novos casos')\n",
+        "plt.legend()\n",
+        "plt.show()"
+      ],
+      "metadata": {
+        "id": "95T4ADAOc4GR"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from IPython.core.pylabtools import figsize\n",
+        "plt.figure(figsize=(25,15))\n",
+        "for city, date in df_cidades_maiores.groupby('city'):\n",
+        "    plt.plot(date['date'], date['new_confirmed'],label=city)\n",
+        "\n",
+        "plt.xlabel('date')\n",
+        "plt.ylabel('new_confirmed')\n",
+        "\n",
+        "plt.legend()\n",
+        "plt.show()"
+      ],
+      "metadata": {
+        "id": "jXhVViJSdEK7"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Plota gráfico da série temporal dos novos casos para as 4 cidades no ano 2020\n"
+      ],
+      "metadata": {
+        "id": "7nkUPtxMfWmD"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from IPython.core.pylabtools import figsize\n",
+        "plt.figure(figsize=(25,15))\n",
+        "for city, date in maiores_cidades_2020.groupby('city'):\n",
+        "    plt.plot(date['date'], date['new_confirmed'],label=city)\n",
+        "\n",
+        "plt.xlabel('date')\n",
+        "plt.ylabel('new_confirmed')\n",
+        "\n",
+        "plt.legend()\n",
+        "plt.show()"
+      ],
+      "metadata": {
+        "id": "B-4M6kdZdTiE"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Plota gráfico da série temporal dos novos casos para as 4 cidades no ano 2021\n"
+      ],
+      "metadata": {
+        "id": "FmIVVhAFfbJw"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from IPython.core.pylabtools import figsize\n",
+        "plt.figure(figsize=(25,15))\n",
+        "for city, date in maiores_cidades_2021.groupby('city'):\n",
+        "    plt.plot(date['date'], date['new_confirmed'],label=city)\n",
+        "\n",
+        "plt.xlabel('date')\n",
+        "plt.ylabel('new_confirmed')\n",
+        "\n",
+        "plt.legend()\n",
+        "plt.show()"
+      ],
+      "metadata": {
+        "id": "pzLSRosWjkPW"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Plota gráfico da série temporal dos novos casos para as 4 cidades no ano 2022\n"
+      ],
+      "metadata": {
+        "id": "j74X9JHafdMq"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from IPython.core.pylabtools import figsize\n",
+        "plt.figure(figsize=(25,15))\n",
+        "for city, date in maiores_cidades_2022.groupby('city'):\n",
+        "    plt.plot(date['date'], date['new_confirmed'],label=city)\n",
+        "\n",
+        "plt.xlabel('date')\n",
+        "plt.ylabel('new_confirmed')\n",
+        "\n",
+        "plt.legend()\n",
+        "plt.show()"
+      ],
+      "metadata": {
+        "id": "ZSJ42-KxeHNl"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Plota gráfico da série temporal dos novos óbitos para as 4 cidades no ano 2020\n"
+      ],
+      "metadata": {
+        "id": "ArBukBGhfpFb"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from IPython.core.pylabtools import figsize\n",
+        "plt.figure(figsize=(25,15))\n",
+        "for city, date in maiores_cidades_2020.groupby('city'):\n",
+        "    plt.plot(date['date'], date['new_deaths'],label=city)\n",
+        "\n",
+        "plt.xlabel('date')\n",
+        "plt.ylabel('new_deaths')\n",
+        "\n",
+        "plt.legend()\n",
+        "plt.show()"
+      ],
+      "metadata": {
+        "id": "BH_HFH7NXTk-"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Plota gráfico da série temporal dos novos óbitos para as 4 cidades no ano 2021\n"
+      ],
+      "metadata": {
+        "id": "egMDvAENftqk"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from IPython.core.pylabtools import figsize\n",
+        "plt.figure(figsize=(25,15))\n",
+        "for city, date in maiores_cidades_2021.groupby('city'):\n",
+        "    plt.plot(date['date'], date['new_deaths'],label=city)\n",
+        "\n",
+        "plt.xlabel('date')\n",
+        "plt.ylabel('new_deaths')\n",
+        "\n",
+        "plt.legend()\n",
+        "plt.show()"
+      ],
+      "metadata": {
+        "id": "MdkSDVaVevkF"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Plota gráfico da série temporal dos novos óbitos para as 4 cidades no ano 2022\n"
+      ],
+      "metadata": {
+        "id": "hGHfatfAfvvg"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from IPython.core.pylabtools import figsize\n",
+        "plt.figure(figsize=(25,15))\n",
+        "for city, date in maiores_cidades_2022.groupby('city'):\n",
+        "    plt.plot(date['date'], date['new_deaths'],label=city)\n",
+        "\n",
+        "plt.xlabel('date')\n",
+        "plt.ylabel('new_deaths')\n",
+        "\n",
+        "plt.legend()\n",
+        "plt.show()"
+      ],
+      "metadata": {
+        "id": "iW6VaefFA-Yv"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Cria 3 dataframes com todas as 9 cidades da RMF e com os dados separados pelo ano"
+      ],
+      "metadata": {
+        "id": "JdlKI2ekg58s"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "cidades_2020 = cidades_SC.query('ano==2020')\n",
+        "cidades_2021 = cidades_SC.query('ano==2021')\n",
+        "cidades_2022 = cidades_SC.query('ano==2022')"
+      ],
+      "metadata": {
+        "id": "CaSZCU1pYQKG"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Agrupar os valores de casos por cidade, ano e mês e acumulado de casos e acumulado de mortes, pegando o valor máximo do mês"
+      ],
+      "metadata": {
+        "id": "v3q5DzOUkoKM"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "cidades_2020_agrupado = cidades_2020.groupby(['city','mês',])['last_available_confirmed','last_available_deaths'].max().reset_index()\n",
+        "cidades_2021_agrupado = cidades_2021.groupby(['city','mês',])['last_available_confirmed','last_available_deaths'].max().reset_index()\n",
+        "cidades_2022_agrupado = cidades_2022.groupby(['city','mês',])['last_available_confirmed','last_available_deaths'].max().reset_index()\n",
+        "\n",
+        "cidades_2021_agrupado.head()"
+      ],
+      "metadata": {
+        "id": "ccLyBB5Feqn2",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 415
+        },
+        "outputId": "121bd92e-4e80-4cca-b782-61abc04dfb68"
+      },
+      "execution_count": 67,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "/usr/local/lib/python3.7/dist-packages/ipykernel_launcher.py:1: FutureWarning:\n",
+            "\n",
+            "Indexing with multiple keys (implicitly converted to a tuple of keys) will be deprecated, use a list instead.\n",
+            "\n",
+            "/usr/local/lib/python3.7/dist-packages/ipykernel_launcher.py:2: FutureWarning:\n",
+            "\n",
+            "Indexing with multiple keys (implicitly converted to a tuple of keys) will be deprecated, use a list instead.\n",
+            "\n",
+            "/usr/local/lib/python3.7/dist-packages/ipykernel_launcher.py:3: FutureWarning:\n",
+            "\n",
+            "Indexing with multiple keys (implicitly converted to a tuple of keys) will be deprecated, use a list instead.\n",
+            "\n"
+          ]
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "             city  mês  last_available_confirmed  last_available_deaths\n",
+              "0  Antônio Carlos    1                       864                     14\n",
+              "1  Antônio Carlos    2                      1019                     15\n",
+              "2  Antônio Carlos    3                      1389                     18\n",
+              "3  Antônio Carlos    4                      1430                     20\n",
+              "4  Antônio Carlos    5                      1463                     22"
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-6df5a12c-fdf1-4a4e-b0ff-2938d6829772\">\n",
+              "    <div class=\"colab-df-container\">\n",
+              "      <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>city</th>\n",
+              "      <th>mês</th>\n",
+              "      <th>last_available_confirmed</th>\n",
+              "      <th>last_available_deaths</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>Antônio Carlos</td>\n",
+              "      <td>1</td>\n",
+              "      <td>864</td>\n",
+              "      <td>14</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>Antônio Carlos</td>\n",
+              "      <td>2</td>\n",
+              "      <td>1019</td>\n",
+              "      <td>15</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>Antônio Carlos</td>\n",
+              "      <td>3</td>\n",
+              "      <td>1389</td>\n",
+              "      <td>18</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>Antônio Carlos</td>\n",
+              "      <td>4</td>\n",
+              "      <td>1430</td>\n",
+              "      <td>20</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>Antônio Carlos</td>\n",
+              "      <td>5</td>\n",
+              "      <td>1463</td>\n",
+              "      <td>22</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "      <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-6df5a12c-fdf1-4a4e-b0ff-2938d6829772')\"\n",
+              "              title=\"Convert this dataframe to an interactive table.\"\n",
+              "              style=\"display:none;\">\n",
+              "        \n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M0 0h24v24H0V0z\" fill=\"none\"/>\n",
+              "    <path d=\"M18.56 5.44l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94zm-11 1L8.5 8.5l.94-2.06 2.06-.94-2.06-.94L8.5 2.5l-.94 2.06-2.06.94zm10 10l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94z\"/><path d=\"M17.41 7.96l-1.37-1.37c-.4-.4-.92-.59-1.43-.59-.52 0-1.04.2-1.43.59L10.3 9.45l-7.72 7.72c-.78.78-.78 2.05 0 2.83L4 21.41c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l7.78-7.78 2.81-2.81c.8-.78.8-2.07 0-2.86zM5.41 20L4 18.59l7.72-7.72 1.47 1.35L5.41 20z\"/>\n",
+              "  </svg>\n",
+              "      </button>\n",
+              "      \n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      flex-wrap:wrap;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "      <script>\n",
+              "        const buttonEl =\n",
+              "          document.querySelector('#df-6df5a12c-fdf1-4a4e-b0ff-2938d6829772 button.colab-df-convert');\n",
+              "        buttonEl.style.display =\n",
+              "          google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "        async function convertToInteractive(key) {\n",
+              "          const element = document.querySelector('#df-6df5a12c-fdf1-4a4e-b0ff-2938d6829772');\n",
+              "          const dataTable =\n",
+              "            await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                     [key], {});\n",
+              "          if (!dataTable) return;\n",
+              "\n",
+              "          const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "            '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "            + ' to learn more about interactive tables.';\n",
+              "          element.innerHTML = '';\n",
+              "          dataTable['output_type'] = 'display_data';\n",
+              "          await google.colab.output.renderOutput(dataTable, element);\n",
+              "          const docLink = document.createElement('div');\n",
+              "          docLink.innerHTML = docLinkHtml;\n",
+              "          element.appendChild(docLink);\n",
+              "        }\n",
+              "      </script>\n",
+              "    </div>\n",
+              "  </div>\n",
+              "  "
+            ]
+          },
+          "metadata": {},
+          "execution_count": 67
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Cria gráfico de linha usando a biblioteca plot express"
+      ],
+      "metadata": {
+        "id": "bdkQ6WtGhVAh"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#De toda a RMF para o ano 2020"
+      ],
+      "metadata": {
+        "id": "SmHr9nL3hqW-"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig = px.line(cidades_2020, x=\"date\", y=\"new_confirmed\", color=\"city\")\n",
+        "fig.show()"
+      ],
+      "metadata": {
+        "id": "zmTVxboVhULX"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#De toda a RMF para todo o período (março de 2020 a março de 2022)"
+      ],
+      "metadata": {
+        "id": "p1TvAUxn8R4G"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig = px.line(cidades_SC, x=\"date\", y=\"new_confirmed\", color=\"city\")\n",
+        "fig.show()"
+      ],
+      "metadata": {
+        "id": "IfwMnax6tGJW"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Plota gráfico da série temporal dos novos casos confirmados apenas para as 4 maiores cidades no ano 2020"
+      ],
+      "metadata": {
+        "id": "d-maZHaMhwC6"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig = px.line(maiores_cidades_2020, x=\"date\", y=\"new_confirmed\", color=\"city\")\n",
+        "fig.show()"
+      ],
+      "metadata": {
+        "id": "NYYuUALNhwUt"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Plota gráfico da série temporal dos novos casos confirmados apenas para as 4 maiores cidades no ano 2021"
+      ],
+      "metadata": {
+        "id": "knkaGvrsiSaZ"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig = px.line(maiores_cidades_2021, x=\"date\", y=\"new_confirmed\", color=\"city\")\n",
+        "fig.show()"
+      ],
+      "metadata": {
+        "id": "9zlAwa15iSpB"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Plota gráfico da série temporal dos novos casos confirmados apenas para as 4 maiores cidades no ano 2022"
+      ],
+      "metadata": {
+        "id": "446el-hriiZO"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig = px.line(maiores_cidades_2022, x=\"date\", y=\"new_confirmed\", color=\"city\")\n",
+        "fig.show()"
+      ],
+      "metadata": {
+        "id": "COL1Nyzpij5H"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#plota a série temporal de novos óbitos por dia, de toda a RMF para o ano 2020"
+      ],
+      "metadata": {
+        "id": "IFnNtYErjPL4"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig = px.line(cidades_2020, x=\"date\", y=\"new_deaths\", color=\"city\")\n",
+        "fig.show()"
+      ],
+      "metadata": {
+        "id": "22tv7C8wjW6x"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Plota gráfico da série temporal dos novos óbitos confirmados apenas para as 4 maiores cidades no ano 2020"
+      ],
+      "metadata": {
+        "id": "sutYsg4Vj7yO"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig = px.line(maiores_cidades_2020, x=\"date\", y=\"new_deaths\", color=\"city\")\n",
+        "fig.show()"
+      ],
+      "metadata": {
+        "id": "YNxf2RJBj7Lm"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Plota gráfico da série temporal dos novos óbitos confirmados apenas para as 4 maiores cidades no ano 2021"
+      ],
+      "metadata": {
+        "id": "ytWRsY8zkBJl"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig = px.line(maiores_cidades_2021, x=\"date\", y=\"new_deaths\", color=\"city\")\n",
+        "fig.show()"
+      ],
+      "metadata": {
+        "id": "wzOzTeeVkBcK"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Plota gráfico da série temporal dos novos óbitos confirmados apenas para as 4 maiores cidades no ano 2022"
+      ],
+      "metadata": {
+        "id": "nTnfmeOtkBwY"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig = px.line(maiores_cidades_2022, x=\"date\", y=\"new_deaths\", color=\"city\")\n",
+        "fig.show()"
+      ],
+      "metadata": {
+        "id": "RwCA0Yu0kB7V"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Agrupa por novos casos e novas mortes, somando o total por mês"
+      ],
+      "metadata": {
+        "id": "dXQZ29A9Xn8N"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "cidades_2020_agrupado_novos_ano_sum = cidades_2020.groupby(['city','mês',])['new_confirmed','new_deaths'].sum().reset_index()\n",
+        "cidades_2021_agrupado_novos_ano_sum = cidades_2021.groupby(['city','mês',])['new_confirmed','new_deaths'].sum().reset_index()\n",
+        "cidades_2022_agrupado_novos_ano_sum = cidades_2022.groupby(['city','mês',])['new_confirmed','new_deaths'].sum().reset_index()\n",
+        "\n",
+        "cidades_2021_agrupado_novos_ano_sum.head()\n"
+      ],
+      "metadata": {
+        "id": "FJb4pB-FbBnP"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Agrupa por novos casos e novas mortes, pegando o maior valor do mês"
+      ],
+      "metadata": {
+        "id": "ISvLS3mdJiQF"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "cidades_2020_agrupado_novos = cidades_2020.groupby(['city','mês',])['new_confirmed','new_deaths'].max().reset_index()\n",
+        "cidades_2021_agrupado_novos = cidades_2021.groupby(['city','mês',])['new_confirmed','new_deaths'].max().reset_index()\n",
+        "cidades_2022_agrupado_novos = cidades_2022.groupby(['city','mês',])['new_confirmed','new_deaths'].max().reset_index()\n",
+        "#cidades_2020_agrupado_novos.head()\n",
+        "cidades_2022_agrupado_novos.head()\n",
+        "#cidades_2020_agrupado_novos.head()"
+      ],
+      "metadata": {
+        "id": "qrOwI8c-JJmT"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Agrupa por novos casos e novas mortes, somando o total por ano"
+      ],
+      "metadata": {
+        "id": "L3aBfc7zGPL1"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "cidades_2020_agrupado_novos_ano = cidades_2020.groupby(['city','ano',])['new_confirmed','new_deaths'].sum().reset_index()\n",
+        "cidades_2021_agrupado_novos_ano = cidades_2021.groupby(['city','ano',])['new_confirmed','new_deaths'].sum().reset_index()\n",
+        "cidades_2022_agrupado_novos_ano = cidades_2022.groupby(['city','ano',])['new_confirmed','new_deaths'].sum().reset_index()\n",
+        "#cidades_2020_agrupado_novos.head()\n",
+        "cidades_2021_agrupado_novos_ano.head()\n",
+        "#cidades_2020_agrupado_novos.head()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 415
+        },
+        "id": "7sgh_vCZGKgq",
+        "outputId": "44ac718d-1886-4684-e20e-22ad4da93efc"
+      },
+      "execution_count": 70,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "/usr/local/lib/python3.7/dist-packages/ipykernel_launcher.py:1: FutureWarning:\n",
+            "\n",
+            "Indexing with multiple keys (implicitly converted to a tuple of keys) will be deprecated, use a list instead.\n",
+            "\n",
+            "/usr/local/lib/python3.7/dist-packages/ipykernel_launcher.py:2: FutureWarning:\n",
+            "\n",
+            "Indexing with multiple keys (implicitly converted to a tuple of keys) will be deprecated, use a list instead.\n",
+            "\n",
+            "/usr/local/lib/python3.7/dist-packages/ipykernel_launcher.py:3: FutureWarning:\n",
+            "\n",
+            "Indexing with multiple keys (implicitly converted to a tuple of keys) will be deprecated, use a list instead.\n",
+            "\n"
+          ]
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "                     city   ano  new_confirmed  new_deaths\n",
+              "0          Antônio Carlos  2021            957          13\n",
+              "1                 Biguaçu  2021           6144         117\n",
+              "2           Florianópolis  2021          43983         794\n",
+              "3  Governador Celso Ramos  2021           1632          24\n",
+              "4                 Palhoça  2021          15945         257"
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-e21330d2-b5b9-45ed-bd23-5ac24c4b9657\">\n",
+              "    <div class=\"colab-df-container\">\n",
+              "      <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>city</th>\n",
+              "      <th>ano</th>\n",
+              "      <th>new_confirmed</th>\n",
+              "      <th>new_deaths</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>Antônio Carlos</td>\n",
+              "      <td>2021</td>\n",
+              "      <td>957</td>\n",
+              "      <td>13</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>Biguaçu</td>\n",
+              "      <td>2021</td>\n",
+              "      <td>6144</td>\n",
+              "      <td>117</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>Florianópolis</td>\n",
+              "      <td>2021</td>\n",
+              "      <td>43983</td>\n",
+              "      <td>794</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>Governador Celso Ramos</td>\n",
+              "      <td>2021</td>\n",
+              "      <td>1632</td>\n",
+              "      <td>24</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>Palhoça</td>\n",
+              "      <td>2021</td>\n",
+              "      <td>15945</td>\n",
+              "      <td>257</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "      <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-e21330d2-b5b9-45ed-bd23-5ac24c4b9657')\"\n",
+              "              title=\"Convert this dataframe to an interactive table.\"\n",
+              "              style=\"display:none;\">\n",
+              "        \n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M0 0h24v24H0V0z\" fill=\"none\"/>\n",
+              "    <path d=\"M18.56 5.44l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94zm-11 1L8.5 8.5l.94-2.06 2.06-.94-2.06-.94L8.5 2.5l-.94 2.06-2.06.94zm10 10l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94z\"/><path d=\"M17.41 7.96l-1.37-1.37c-.4-.4-.92-.59-1.43-.59-.52 0-1.04.2-1.43.59L10.3 9.45l-7.72 7.72c-.78.78-.78 2.05 0 2.83L4 21.41c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l7.78-7.78 2.81-2.81c.8-.78.8-2.07 0-2.86zM5.41 20L4 18.59l7.72-7.72 1.47 1.35L5.41 20z\"/>\n",
+              "  </svg>\n",
+              "      </button>\n",
+              "      \n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      flex-wrap:wrap;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "      <script>\n",
+              "        const buttonEl =\n",
+              "          document.querySelector('#df-e21330d2-b5b9-45ed-bd23-5ac24c4b9657 button.colab-df-convert');\n",
+              "        buttonEl.style.display =\n",
+              "          google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "        async function convertToInteractive(key) {\n",
+              "          const element = document.querySelector('#df-e21330d2-b5b9-45ed-bd23-5ac24c4b9657');\n",
+              "          const dataTable =\n",
+              "            await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                     [key], {});\n",
+              "          if (!dataTable) return;\n",
+              "\n",
+              "          const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "            '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "            + ' to learn more about interactive tables.';\n",
+              "          element.innerHTML = '';\n",
+              "          dataTable['output_type'] = 'display_data';\n",
+              "          await google.colab.output.renderOutput(dataTable, element);\n",
+              "          const docLink = document.createElement('div');\n",
+              "          docLink.innerHTML = docLinkHtml;\n",
+              "          element.appendChild(docLink);\n",
+              "        }\n",
+              "      </script>\n",
+              "    </div>\n",
+              "  </div>\n",
+              "  "
+            ]
+          },
+          "metadata": {},
+          "execution_count": 70
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "cidades_2020"
+      ],
+      "metadata": {
+        "id": "LdhYmyYWICnq"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Gráfico de barras do total de confirmados para as 9 cidades da RMF por mês no ano 2020"
+      ],
+      "metadata": {
+        "id": "l6BSoyBBv-my"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig = px.bar(cidades_2020_agrupado,x='mês',y='last_available_confirmed',color='city',barmode='group',title=\"Número de casos acumulados de COVID-19 na RMF por mês no ano de 2020.\",text='last_available_confirmed')\n",
+        "#fig.update_traces(texttemplate='%{text:.2s}',textposition='outside')\n",
+        "fig.update_traces(textposition='outside')\n",
+        "fig.update_xaxes(type='category')\n",
+        "fig.show()"
+      ],
+      "metadata": {
+        "id": "ZEAEwjyHvuDW"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Gráfico de barras do total de confirmados para as 9 cidades da RMF por mês no ano 2021"
+      ],
+      "metadata": {
+        "id": "neT1zqNcvjBd"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig = px.bar(cidades_2021_agrupado,x='mês',y='last_available_confirmed',color='city',barmode='group',title=\"Número de casos acumulados de COVID-19 na RMF por mês no ano de 2021.\",text='last_available_confirmed')\n",
+        "#fig.update_traces(texttemplate='%{text:.2s}',textposition='outside')\n",
+        "fig.update_traces(textposition='outside')\n",
+        "fig.update_xaxes(type='category')\n",
+        "fig.show()"
+      ],
+      "metadata": {
+        "id": "4jVC727Pz95V"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Gráfico de barras do total de confirmados para as 9 cidades da RMF no ano 2022"
+      ],
+      "metadata": {
+        "id": "WuLmnPNWwCS8"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig = px.bar(cidades_2022_agrupado,x='mês',y='last_available_confirmed',color='city',barmode='group',title=\"Número de casos acumulados de COVID-19 na RMF por mês no ano de 2022.\",text='last_available_confirmed')\n",
+        "#fig.update_traces(texttemplate='%{text:.2s}',textposition='outside')\n",
+        "fig.update_traces(textposition='outside')\n",
+        "fig.update_xaxes(type='category')\n",
+        "fig.show()"
+      ],
+      "metadata": {
+        "id": "ot3_mlANwCh8"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#cidades_2020_agrupado_novos_ano_sum"
+      ],
+      "metadata": {
+        "id": "UXfuXvtjJ4uc"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#cidades_2020_agrupado_novos_ano_sum.to_csv('cidades_2020_agrupado_novos_ano_sum.csv')"
+      ],
+      "metadata": {
+        "id": "_DFa_OHuKbLK"
+      },
+      "execution_count": 72,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#cidades_2021_agrupado_novos_ano_sum.to_csv('cidades_2021_agrupado_novos_ano_sum.csv')"
+      ],
+      "metadata": {
+        "id": "seiIZlzqLPow"
+      },
+      "execution_count": 74,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#cidades_2022_agrupado_novos_ano_sum.to_csv('cidades_2022_agrupado_novos_ano_sum.csv')"
+      ],
+      "metadata": {
+        "id": "oC4dzjvZLqLx"
+      },
+      "execution_count": 75,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#cidades_2020_agrupado.to_csv('ccidades_2020_agrupado.csv')"
+      ],
+      "metadata": {
+        "id": "_-pwV43mL0yC"
+      },
+      "execution_count": 78,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#cidades_2021_agrupado.to_csv('ccidades_2021_agrupado.csv')"
+      ],
+      "metadata": {
+        "id": "G3RIRxfHK79q"
+      },
+      "execution_count": 79,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#cidades_2022_agrupado.to_csv('ccidades_2022_agrupado.csv')"
+      ],
+      "metadata": {
+        "id": "_lnVXjguLvQW"
+      },
+      "execution_count": 81,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Gráfico de barras dos novos confirmados para as 9 cidades da RMF por mês no ano 2020"
+      ],
+      "metadata": {
+        "id": "RhsrJXXcxC5R"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig_2020 = px.bar(cidades_2020_agrupado_novos_ano_sum,x='mês',y='new_confirmed',color='city',barmode='group',title=\"Número total de novos casos de COVID-19 na RMF por mês no ano de 2020.\",text='new_confirmed')\n",
+        "fig_2020.update_traces(textposition='outside')\n",
+        "fig_2020.update_xaxes(type='category')\n",
+        "fig_2020.show()"
+      ],
+      "metadata": {
+        "id": "YZguhdgiXoXF"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Gráfico de barras dos novos confirmados para as 9 cidades da RMF no ano 2021"
+      ],
+      "metadata": {
+        "id": "s0jMm9eZxH4i"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig_2021 = px.bar(cidades_2021_agrupado_novos_ano_sum,x='mês',y='new_confirmed',color='city',barmode='group',title=\"Número total de novos casos de COVID-19 na RMF por mês no ano de 2021.\",text='new_confirmed')\n",
+        "fig_2021.update_traces(textposition='outside')\n",
+        "fig_2021.update_xaxes(type='category')\n",
+        "fig_2021.show()"
+      ],
+      "metadata": {
+        "id": "dcDmAD_1aBdL"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Gráfico de barras dos novos confirmados para as 9 cidades da RMF no ano 2022"
+      ],
+      "metadata": {
+        "id": "LDf8LtOwxMeY"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig_2022 = px.bar(cidades_2022_agrupado_novos_ano_sum,x='mês',y='new_confirmed',color='city',barmode='group',title=\"Número total de novos casos de COVID-19 na RMF por mês no ano de 2022.\",text='new_confirmed')\n",
+        "fig_2022.update_traces(textposition='outside')\n",
+        "fig_2022.update_xaxes(type='category')\n",
+        "fig_2022.show()"
+      ],
+      "metadata": {
+        "id": "UJi852t_aCGl"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Gráfico de barras dos novos óbitos para as 9 cidades da RMF no ano 2020"
+      ],
+      "metadata": {
+        "id": "uhy7LHp8xaJy"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig_2020_mortes = px.bar(cidades_2020_agrupado_novos_ano_sum,x='mês',y='new_deaths',color='city',barmode='group',title=\"Número total de novos óbitos de COVID-19 na RMF por mês no ano de 2020.\",text='new_deaths')\n",
+        "fig_2020_mortes.update_traces(textposition='outside')\n",
+        "fig_2020_mortes.update_xaxes(type='category')\n",
+        "fig_2020_mortes.show()"
+      ],
+      "metadata": {
+        "id": "5vaA0zWwaddE"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Gráfico de barras dos novos óbitos para as 9 cidades da RMF no ano 2021"
+      ],
+      "metadata": {
+        "id": "XWb--HD-xgs1"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig_2021_mortes = px.bar(cidades_2021_agrupado_novos_ano_sum,x='mês',y='new_deaths',color='city',barmode='group',title=\"Número total de novos óbitos de COVID-19 na RMF por mês no ano de 2021.\",text='new_deaths')\n",
+        "fig_2021_mortes.update_traces(textposition='outside')\n",
+        "fig_2021_mortes.update_xaxes(type='category')\n",
+        "fig_2021_mortes.show()"
+      ],
+      "metadata": {
+        "id": "Wo6EOd7jaziC"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Gráfico de barras dos novos óbitos para as 9 cidades da RMF no ano 2022"
+      ],
+      "metadata": {
+        "id": "5XEEC5B9xjut"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig_2022_mortes = px.bar(cidades_2022_agrupado_novos_ano_sum,x='mês',y='new_deaths',color='city',barmode='group',title=\"Número total de novos óbitos de COVID-19 na RMF por mês no ano de 2022.\",text='new_deaths')\n",
+        "fig_2022_mortes.update_traces(textposition='outside')\n",
+        "fig_2022_mortes.update_xaxes(type='category')\n",
+        "fig_2022_mortes.show()"
+      ],
+      "metadata": {
+        "id": "DDPmwoeia0TZ"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Gráfico de barras dos novos óbitos para as 9 cidades da RMF no ano 2020"
+      ],
+      "metadata": {
+        "id": "hgRNEtqzyABt"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig_2020_mortes_ano = px.bar(cidades_2020_agrupado_novos_ano,x='ano',y='new_deaths',color='city',barmode='group',title=\"Número total de novos óbitos de COVID-19 na RMF no ano de 2020 por cidade.\",text='new_deaths')\n",
+        "fig_2020_mortes_ano.update_traces(textposition='outside')\n",
+        "fig_2020_mortes_ano.update_xaxes(type='category')\n",
+        "fig_2020_mortes_ano.show()"
+      ],
+      "metadata": {
+        "id": "4FkOObp7b_k2"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig_2021_mortes_ano = px.bar(cidades_2021_agrupado_novos_ano,x='ano',y='new_deaths',color='city',barmode='group',title=\"Número de novos óbitos de COVID-19 na RMF no ano de 2021 por cidade.\",text='new_deaths')\n",
+        "fig_2021_mortes_ano.update_traces(textposition='outside')\n",
+        "fig_2021_mortes_ano.update_xaxes(type='category')\n",
+        "fig_2021_mortes_ano.show()"
+      ],
+      "metadata": {
+        "id": "3KPtUSdfbFjU"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "fig_2022_mortes_ano = px.bar(cidades_2022_agrupado_novos_ano,x='ano',y='new_deaths',color='city',barmode='group',title=\"Número de novos óbitos de COVID-19 na RMF no ano de 2022 por cidade.\",text='new_deaths')\n",
+        "fig_2022_mortes_ano.update_traces(textposition='outside')\n",
+        "fig_2022_mortes_ano.update_xaxes(type='category')\n",
+        "fig_2022_mortes_ano.show()"
+      ],
+      "metadata": {
+        "id": "ldIabMR1cAOp"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
